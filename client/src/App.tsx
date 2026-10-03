@@ -4,6 +4,7 @@ import { NavBar } from './components/NavBar'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { Dashboard } from './pages/Dashboard'
+import { AdminPanel } from './components/AdminPanel'
 
 export function App() {
   return (
@@ -13,7 +14,7 @@ export function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/admin" element={<div>Admin</div>} />
+        <Route path="/admin" element={<AdminPanel />} />
       </Routes>
     </AuthProvider>
   )
