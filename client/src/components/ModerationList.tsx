@@ -47,26 +47,28 @@ export function ModerationList() {
 
   return (
     <div>
-      {error && <p role="alert">{error}</p>}
-      <ul>
+      {error && <p className="error" role="alert">{error}</p>}
+      <ul className="feed">
         {items.map((k) => (
-          <li key={k.id}>
-            <div>
+          <li className="card" key={k.id}>
+            <div className="kudos-header">
               {k.sender.username} -&gt; {k.recipient.username}
+              {!k.isVisible && <span className="badge">hidden</span>}
             </div>
-            <p>{k.message}</p>
-            {!k.isVisible && <span>hidden</span>}
-            <input
-              placeholder="Reason"
-              value={reasons[k.id] ?? ''}
-              onChange={(e) => setReasons({ ...reasons, [k.id]: e.target.value })}
-            />
-            {k.isVisible ? (
-              <button onClick={() => hide(k.id)}>Hide</button>
-            ) : (
-              <button onClick={() => unhide(k.id)}>Unhide</button>
-            )}
-            <button onClick={() => remove(k.id)}>Delete</button>
+            <p className="kudos-message">{k.message}</p>
+            <div className="actions">
+              <input
+                placeholder="Reason"
+                value={reasons[k.id] ?? ''}
+                onChange={(e) => setReasons({ ...reasons, [k.id]: e.target.value })}
+              />
+              {k.isVisible ? (
+                <button onClick={() => hide(k.id)}>Hide</button>
+              ) : (
+                <button onClick={() => unhide(k.id)}>Unhide</button>
+              )}
+              <button className="btn-danger" onClick={() => remove(k.id)}>Delete</button>
+            </div>
           </li>
         ))}
       </ul>

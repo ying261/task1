@@ -48,8 +48,8 @@ export function KudosForm({ onSubmitted }: { onSubmitted: () => void }) {
   }
 
   return (
-    <form onSubmit={onSubmit}>
-      <label>
+    <form className="form" onSubmit={onSubmit}>
+      <label className="form-field">
         To:
         <select value={recipientId} onChange={(e) => setRecipientId(e.target.value)}>
           <option value="">Select a colleague</option>
@@ -58,11 +58,11 @@ export function KudosForm({ onSubmitted }: { onSubmitted: () => void }) {
           ))}
         </select>
       </label>
-      <label>
+      <label className="form-field">
         Message:
         <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} />
       </label>
-      {error && <p role="alert">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       <button type="submit" disabled={submitting}>Send</button>
     </form>
   )

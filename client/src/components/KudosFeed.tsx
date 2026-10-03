@@ -48,8 +48,10 @@ export function KudosFeed() {
 
   return (
     <div>
-      {error && <p>{error}</p>}
-      {items.map((k) => <KudosCard key={k.id} kudos={k} />)}
+      {error && <p className="error">{error}</p>}
+      <div className="feed">
+        {items.map((k) => <KudosCard key={k.id} kudos={k} />)}
+      </div>
       {hasMore && <button onClick={loadMore} disabled={loading}>Load more</button>}
     </div>
   )

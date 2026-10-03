@@ -21,11 +21,17 @@ export function RegisterPage() {
   }
 
   return (
-    <form onSubmit={onSubmit}>
+    <form className="form" onSubmit={onSubmit}>
       <h1>Register</h1>
-      <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
-      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-      {error && <p>{error}</p>}
+      <label className="form-field">
+        Username
+        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
+      </label>
+      <label className="form-field">
+        Password
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+      </label>
+      {error && <p className="error">{error}</p>}
       <button type="submit">Register</button>
     </form>
   )

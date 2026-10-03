@@ -5,11 +5,11 @@ export function NavBar() {
   const { user, logout } = useAuth()
 
   return (
-    <nav>
-      <Link to="/">Kudos</Link>
+    <nav className="navbar">
+      <Link className="nav-brand" to="/">Kudos</Link>
       {user ? (
         <>
-          <span>{user.username}</span>
+          <span className="nav-user">{user.username}</span>
           {user.role === 'ADMIN' && <Link to="/admin">Admin</Link>}
           <button onClick={logout}>Logout</button>
         </>
