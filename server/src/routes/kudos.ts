@@ -1,10 +1,55 @@
 import { Router } from 'express'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { ApiError } from '../lib/errors'
-import { requireAuth } from '../middleware/auth'
+import { requireAuth, requireAdmin } from '../middleware/auth'
 import { checkRateLimit } from '../lib/rateLimit'
 
+interface KudosWithPeople {
+  id: number
+  message: string
+  createdAt: Date
+  isVisible: boolean
+  moderatedBy: number | null
+  moderatedAt: Date | null
+  reasonForModeration: string | null
+  sender: { id: number; username: string }
+  recipient: { id: number; username: string }
+}
+
+const kudosInclude = {
+  sender: { select: { id: true, username: true } },
+  recipient: { select: { id: true, username: true } },
+}
+
+function toPublicDto(k: KudosWithPeople) {
+  return { id: k.id, message: k.message, createdAt: k.createdAt, sender: k.sender, recipient: k.recipient }
+}
+
+function toAdminDto(k: KudosWithPeople) {
+  return {
+    id: k.id,
+    message: k.message,
+    createdAt: k.createdAt,
+    sender: k.sender,
+    recipient: k.recipient,
+    isVisible: k.isVisible,
+    moderatedBy: k.moderatedBy,
+    moderatedAt: k.moderatedAt,
+    reasonForModeration: k.reasonForModeration,
+  }
+}
+
+function parseId(raw: string): number {
+  const id = Number.parseInt(raw, 10)
+  if (!Number.isInteger(id)) {
+    throw new ApiError(400, 'VALIDATION', 'Invalid kudos id')
+  }
+  return id
+}
+
 export const kudosRouter = Router()
+export const adminKudosRouter = Router()
 
 kudosRouter.get('/', async (req, res, next) => {
   try {
@@ -17,21 +62,11 @@ kudosRouter.get('/', async (req, res, next) => {
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
-        include: {
-          sender: { select: { id: true, username: true } },
-          recipient: { select: { id: true, username: true } },
-        },
+        include: kudosInclude,
       }),
       prisma.kudos.count({ where }),
     ])
-    const items = rows.map((k) => ({
-      id: k.id,
-      message: k.message,
-      createdAt: k.createdAt,
-      sender: k.sender,
-      recipient: k.recipient,
-    }))
-    res.json({ items, page, limit, total })
+    res.json({ items: rows.map(toPublicDto), page, limit, total })
   } catch (e) {
     next(e)
   }
@@ -63,19 +98,80 @@ kudosRouter.post('/', requireAuth, async (req, res, next) => {
 
     const kudos = await prisma.kudos.create({
       data: { senderId, recipientId, message: message.trim() },
-      include: {
-        sender: { select: { id: true, username: true } },
-        recipient: { select: { id: true, username: true } },
-      },
+      include: kudosInclude,
     })
 
-    res.status(201).json({
-      id: kudos.id,
-      message: kudos.message,
-      createdAt: kudos.createdAt,
-      sender: kudos.sender,
-      recipient: kudos.recipient,
+    res.status(201).json(toPublicDto(kudos))
+  } catch (e) {
+    next(e)
+  }
+})
+
+kudosRouter.patch('/:id/hide', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id)
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason : null
+    const kudos = await prisma.kudos.update({
+      where: { id },
+      data: { isVisible: false, moderatedBy: res.locals.userId, moderatedAt: new Date(), reasonForModeration: reason },
+      include: kudosInclude,
     })
+    console.log(JSON.stringify({ actor: res.locals.userId, target: id, action: 'hide', reason }))
+    res.json(toAdminDto(kudos))
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+      return next(new ApiError(404, 'NOT_FOUND', 'Kudos not found'))
+    }
+    next(e)
+  }
+})
+
+kudosRouter.patch('/:id/unhide', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id)
+    const kudos = await prisma.kudos.update({
+      where: { id },
+      data: { isVisible: true },
+      include: kudosInclude,
+    })
+    console.log(JSON.stringify({ actor: res.locals.userId, target: id, action: 'unhide' }))
+    res.json(toAdminDto(kudos))
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+      return next(new ApiError(404, 'NOT_FOUND', 'Kudos not found'))
+    }
+    next(e)
+  }
+})
+
+kudosRouter.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id)
+    await prisma.kudos.delete({ where: { id } })
+    console.log(JSON.stringify({ actor: res.locals.userId, target: id, action: 'delete' }))
+    res.json({ ok: true })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+      return next(new ApiError(404, 'NOT_FOUND', 'Kudos not found'))
+    }
+    next(e)
+  }
+})
+
+adminKudosRouter.get('/', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1)
+    const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit ?? '20'), 10) || 20))
+    const [rows, total] = await Promise.all([
+      prisma.kudos.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: kudosInclude,
+      }),
+      prisma.kudos.count(),
+    ])
+    res.json({ items: rows.map(toAdminDto), page, limit, total })
   } catch (e) {
     next(e)
   }
