@@ -6,6 +6,37 @@ import { checkRateLimit } from '../lib/rateLimit'
 
 export const kudosRouter = Router()
 
+kudosRouter.get('/', async (req, res, next) => {
+  try {
+    const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1)
+    const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit ?? '20'), 10) || 20))
+    const where = { isVisible: true }
+    const [rows, total] = await Promise.all([
+      prisma.kudos.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          sender: { select: { id: true, username: true } },
+          recipient: { select: { id: true, username: true } },
+        },
+      }),
+      prisma.kudos.count({ where }),
+    ])
+    const items = rows.map((k) => ({
+      id: k.id,
+      message: k.message,
+      createdAt: k.createdAt,
+      sender: k.sender,
+      recipient: k.recipient,
+    }))
+    res.json({ items, page, limit, total })
+  } catch (e) {
+    next(e)
+  }
+})
+
 kudosRouter.post('/', requireAuth, async (req, res, next) => {
   try {
     const senderId = res.locals.userId as number

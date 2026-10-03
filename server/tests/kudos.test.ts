@@ -66,3 +66,23 @@ describe('POST /api/kudos', () => {
     expect(res.status).toBe(429)
   })
 })
+
+describe('GET /api/kudos', () => {
+  it('returns only visible kudos, newest first', async () => {
+    const alice = await login('alice')
+    const bob = await login('bob')
+    const bobId = await userId('bob')
+    const aliceId = await userId('alice')
+    await request(app).post('/api/kudos').set('Cookie', alice).send({ recipientId: bobId, message: 'first' })
+    await request(app).post('/api/kudos').set('Cookie', bob).send({ recipientId: aliceId, message: 'second' })
+    const res = await request(app).get('/api/kudos')
+    expect(res.status).toBe(200)
+    expect(res.body.items[0].message).toBe('second')
+    expect(res.body.items).toHaveLength(2)
+  })
+  it('returns empty items past the last page', async () => {
+    const res = await request(app).get('/api/kudos?page=999&limit=20')
+    expect(res.status).toBe(200)
+    expect(res.body.items).toEqual([])
+  })
+})
