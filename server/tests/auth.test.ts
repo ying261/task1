@@ -9,6 +9,16 @@ describe('auth', () => {
     expect(res.status).toBe(201)
     expect(res.body).toMatchObject({ username: 'carol', role: 'USER' })
   })
+  it('establishes a working session on register', async () => {
+    const res = await request(app).post('/api/auth/register')
+      .send({ username: 'dave', password: 'secret123' })
+    expect(res.status).toBe(201)
+    const cookie = res.headers['set-cookie']?.[0]
+    expect(cookie).toMatch(/token=/)
+    const me = await request(app).get('/api/auth/me').set('Cookie', cookie)
+    expect(me.status).toBe(200)
+    expect(me.body.username).toBe('dave')
+  })
   it('rejects duplicate username', async () => {
     await request(app).post('/api/auth/register').send({ username: 'carol', password: 'secret123' })
     const res = await request(app).post('/api/auth/register').send({ username: 'carol', password: 'secret123' })

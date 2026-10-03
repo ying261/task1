@@ -73,6 +73,28 @@ describe('ModerationList', () => {
       expect(mockApiFetch).toHaveBeenCalledWith('/api/kudos/1', expect.objectContaining({ method: 'DELETE' }))
     })
   })
+
+  it('loads more kudos when more pages remain', async () => {
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path === '/api/admin/kudos') return Promise.resolve({ items: [visibleItem], page: 1, limit: 20, total: 2 })
+      if (path === '/api/admin/kudos?page=2&limit=20') return Promise.resolve({ items: [hiddenItem], page: 2, limit: 20, total: 2 })
+      return Promise.reject(new Error('unexpected ' + path))
+    })
+    render(<ModerationList />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Load more' }))
+    expect(await screen.findByText('hidden')).toBeInTheDocument()
+  })
+
+  it('shows an error when a moderation action fails', async () => {
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path === '/api/admin/kudos') return Promise.resolve({ items: [visibleItem], page: 1, limit: 20, total: 1 })
+      if (path === '/api/kudos/1/hide') return Promise.reject(new Error('Forbidden'))
+      return Promise.reject(new Error('unexpected ' + path))
+    })
+    render(<ModerationList />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Hide' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Forbidden')
+  })
 })
 
 describe('AdminPanel', () => {

@@ -11,15 +11,36 @@ interface AdminFeed {
 
 export function ModerationList() {
   const [items, setItems] = useState<AdminKudosDTO[]>([])
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
   const [reasons, setReasons] = useState<Record<number, string>>({})
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   async function refresh() {
     try {
       const res = await apiFetch<AdminFeed>('/api/admin/kudos')
       setItems(res.items)
+      setTotal(res.total)
+      setPage(1)
+      setError('')
     } catch {
       setError('Failed to load kudos')
+    }
+  }
+
+  async function loadMore() {
+    const next = page + 1
+    setLoading(true)
+    try {
+      const res = await apiFetch<AdminFeed>(`/api/admin/kudos?page=${next}&limit=20`)
+      setItems((prev) => [...prev, ...res.items])
+      setPage(next)
+      setTotal(res.total)
+    } catch {
+      setError('Failed to load more')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -28,22 +49,36 @@ export function ModerationList() {
   }, [])
 
   async function hide(id: number) {
-    await apiFetch(`/api/kudos/${id}/hide`, {
-      method: 'PATCH',
-      body: JSON.stringify({ reason: reasons[id] ?? '' }),
-    })
-    refresh()
+    try {
+      await apiFetch(`/api/kudos/${id}/hide`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reason: reasons[id] ?? '' }),
+      })
+      refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to hide kudos')
+    }
   }
 
   async function unhide(id: number) {
-    await apiFetch(`/api/kudos/${id}/unhide`, { method: 'PATCH' })
-    refresh()
+    try {
+      await apiFetch(`/api/kudos/${id}/unhide`, { method: 'PATCH' })
+      refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to unhide kudos')
+    }
   }
 
   async function remove(id: number) {
-    await apiFetch(`/api/kudos/${id}`, { method: 'DELETE' })
-    refresh()
+    try {
+      await apiFetch(`/api/kudos/${id}`, { method: 'DELETE' })
+      refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete kudos')
+    }
   }
+
+  const hasMore = items.length < total
 
   return (
     <div>
@@ -72,6 +107,7 @@ export function ModerationList() {
           </li>
         ))}
       </ul>
+      {hasMore && <button onClick={loadMore} disabled={loading}>Load more</button>}
     </div>
   )
 }

@@ -22,6 +22,8 @@ authRouter.post('/register', async (req, res, next) => {
     }
     const passwordHash = await hashPassword(password)
     const user = await prisma.user.create({ data: { username, passwordHash, role: 'USER' } })
+    const token = signToken({ userId: user.id, role: user.role })
+    res.cookie(COOKIE_NAME, token, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
     res.status(201).json({ id: user.id, username: user.username, role: user.role })
   } catch (e) {
     next(e)
