@@ -9,7 +9,7 @@
     "test": "vitest run",
     "prisma": "prisma",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed-cli.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",

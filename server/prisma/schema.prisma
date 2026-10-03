@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  passwordHash  String
+  role          Role     @default(USER)
+  createdAt     DateTime @default(now())
+  sentKudos     Kudos[]  @relation("Sent")
+  receivedKudos Kudos[]  @relation("Received")
+}
+
+model Kudos {
+  id                  Int       @id @default(autoincrement())
+  senderId            Int
+  recipientId         Int
+  message             String // max 500 chars, validated server-side
+  createdAt           DateTime  @default(now())
+  isVisible           Boolean   @default(true)
+  moderatedBy         Int?
+  moderatedAt         DateTime?
+  reasonForModeration String?
+  sender              User      @relation("Sent", fields: [senderId], references: [id])
+  recipient           User      @relation("Received", fields: [recipientId], references: [id])
+
+  @@index([isVisible, createdAt])
+  @@index([senderId])
+  @@index([recipientId])
+}
