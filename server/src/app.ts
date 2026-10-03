@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser'
 import { requestLogger } from './middleware/requestLogger'
 import { errorHandler } from './middleware/errorHandler'
 import { authRouter } from './routes/auth'
+import { usersRouter } from './routes/users'
 
 export const app = express()
 
@@ -17,6 +18,7 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/auth', authRouter)
+app.use('/api/users', usersRouter)
 
 app.use((_req, res) => {
   res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not found' } })
